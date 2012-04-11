@@ -274,44 +274,31 @@ void depth_cb(freenect_device *dev, void *v_depth, uint32_t timestamp)
 	pthread_mutex_lock(&gl_backbuf_mutex);
 	for (i=0; i<640*480; i++) {
 		int pval = t_gamma[depth[i]];
-		int lb = pval & 0xff;
-		switch (pval>>8) {
-			case 0:
-				depth_mid[3*i+0] = 255;
-				depth_mid[3*i+1] = 255-lb;
-				depth_mid[3*i+2] = 255-lb;
-				break;
-			case 1:
-				depth_mid[3*i+0] = 255;
-				depth_mid[3*i+1] = lb;
-				depth_mid[3*i+2] = 0;
-				break;
-			case 2:
-				depth_mid[3*i+0] = 255-lb;
-				depth_mid[3*i+1] = 255;
-				depth_mid[3*i+2] = 0;
-				break;
-			case 3:
-				depth_mid[3*i+0] = 0;
-				depth_mid[3*i+1] = 255;
-				depth_mid[3*i+2] = lb;
-				break;
-			case 4:
-				depth_mid[3*i+0] = 0;
-				depth_mid[3*i+1] = 255-lb;
-				depth_mid[3*i+2] = 255;
-				break;
-			case 5:
-				depth_mid[3*i+0] = 0;
-				depth_mid[3*i+1] = 0;
-				depth_mid[3*i+2] = 255-lb;
-				break;
-			default:
-				depth_mid[3*i+0] = 0;
-				depth_mid[3*i+1] = 0;
-				depth_mid[3*i+2] = 0;
-				break;
-		}
+		// Use the HSL color space to directly map depth to colors, then transform values to RGB
+                if (pval>=2048) {
+                        depth_mid[3*i+0] = 0;
+                        depth_mid[3*i+1] = 0;
+                        depth_mid[3*i+2] = 0;
+                } else {
+                        H = pval/2048.0;
+                        vh = H*6;
+                        vi = (int)vh;
+                        v1 = 1-(vh-vi);
+                        v2 = (vh-vi);
+
+                        switch ((int)vi) {
+                                case 0:  vr=1 ; vg=v2; vb=0 ; break;
+                                case 1:  vr=v1; vg=1 ; vb=0 ; break;
+                                case 2:  vr=0 ; vg=1 ; vb=v2; break;
+                                case 3:  vr=0 ; vg=v1; vb=1 ; break;
+                                case 4:  vr=v2; vg=0 ; vb=1 ; break;
+                                default: vr=1 ; vg=0 ; vb=v1;
+                        }
+
+                        depth_mid[3*i+0] = vr * 255 ;
+                        depth_mid[3*i+1] = vg * 255 ;
+                        depth_mid[3*i+2] = vb * 255 ;
+                }
 	}
 	got_depth++;
 	pthread_cond_signal(&gl_frame_cond);
