@@ -270,11 +270,12 @@ void depth_cb(freenect_device *dev, void *v_depth, uint32_t timestamp)
 {
 	int i;
 	uint16_t *depth = (uint16_t*)v_depth;
+        float H, vh, vr, vg, vb, vi, v1, v2;
 
 	pthread_mutex_lock(&gl_backbuf_mutex);
 	for (i=0; i<640*480; i++) {
 		int pval = t_gamma[depth[i]];
-		// Use the HSL color space to directly map depth to colors, then transform values to RGB
+		// Use the HSV color space to directly map depth to colors, then transform values to RGB
                 if (pval>=2048) {
                         depth_mid[3*i+0] = 0;
                         depth_mid[3*i+1] = 0;
